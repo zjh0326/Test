@@ -1,0 +1,24 @@
+# STM32
+stm32/MDK-ARM/
+stm32/Debug/
+stm32/Release/
+stm32/*.uvguix.*
+stm32/*.dep
+
+# Unity
+unity/[Ll]ibrary/
+unity/[Tt]emp/
+unity/[Oo]bj/
+unity/[Ll]ogs/
+unity/[Mm]emoryCaptures/
+unity/[Pp]ackages/
+unity/UserSettings/
+unity/.vs/
+
+# General
+*.bak
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
