@@ -312,9 +312,13 @@ extern "C" void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *huart, uint16_t S
                         // ✅ 收到完整AT帧，发送到CAN总线
                         FDCAN_SendExtFrame(at_rx_frame.can_id, at_rx_frame.data, at_rx_frame.data_len);
                         // 保存最后一条命令用于定期轮询触发反馈
-                        last_can_cmd.can_id = at_rx_frame.can_id;
-                        last_can_cmd.data_len = at_rx_frame.data_len;
-                        memcpy(last_can_cmd.data, at_rx_frame.data, at_rx_frame.data_len);
+                        // 过滤 GetParam(0x11) — 避免覆盖运动指令导致反馈中断
+                        uint32_t rx_commType = (at_rx_frame.can_id >> 24) & 0xFF;
+                        if (rx_commType != 0x11) {
+                            last_can_cmd.can_id = at_rx_frame.can_id;
+                            last_can_cmd.data_len = at_rx_frame.data_len;
+                            memcpy(last_can_cmd.data, at_rx_frame.data, at_rx_frame.data_len);
+                        }
                         // 翻转LED2表示收到指令
                         HAL_GPIO_TogglePin(GPIOE, LED2_Pin);
                     }
@@ -444,7 +448,7 @@ HAL_Delay(20);
     {
         // 每100ms重发最后一条CAN命令（触发电机回复反馈，不影响电机行为）
         static uint32_t last_poll = 0;
-        if (HAL_GetTick() - last_poll > 100 && last_can_cmd.data_len > 0) {
+        if (HAL_GetTick() - last_poll > 20 && last_can_cmd.data_len > 0) {
             FDCAN_SendExtFrame(last_can_cmd.can_id, last_can_cmd.data, last_can_cmd.data_len);
             last_poll = HAL_GetTick();
         }

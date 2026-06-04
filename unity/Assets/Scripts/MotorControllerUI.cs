@@ -1,5 +1,8 @@
 using UnityEngine;
 using TMPro;
+using System;
+using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 public class MotorControllerUI : MonoBehaviour
 {
@@ -19,10 +22,18 @@ public class MotorControllerUI : MonoBehaviour
 
     private UartManager uart;
     private AtFrameDecoder decoder;
+    private ConcurrentQueue<System.Action> mainThreadActions = new ConcurrentQueue<System.Action>();
 
     public MotorFeedback LastFeedback { get; private set; }
     public bool MotorEnabled { get; private set; }
     public event System.Action<ushort, byte[]> OnGetParamResponse;
+
+    void Update()
+    {
+        System.Action action;
+        while (mainThreadActions.TryDequeue(out action))
+            action();
+    }
 
     void Start()
     {
@@ -41,26 +52,13 @@ public class MotorControllerUI : MonoBehaviour
         decoder = new AtFrameDecoder();
         decoder.OnFrameDecoded += frame =>
         {
-            uint commType = (frame.canId >> 24) & 0xFF;
-            if (commType == 0x02 || commType == 0x18)
+            var frameCopy = frame;
+            frameCopy.data = new byte[frame.dataLen];
+            Array.Copy(frame.data, frameCopy.data, frame.dataLen);
+            mainThreadActions.Enqueue(() =>
             {
-                LastFeedback = MotorFeedback.Parse(frame);
-                Debug.Log($"[RX] {LastFeedback}");
-            }
-            else if (commType == 0x11 && frame.dataLen >= 8)
-            {
-                ushort idx = (ushort)(frame.data[0] | (frame.data[1] << 8));
-                if (idx == 0x7005)
-                    Debug.Log($"[RX] GetParam idx=0x{idx:X4} mode={frame.data[4]}");
-                else if (idx == 0x7006)
-                {
-                    float val = System.BitConverter.ToSingle(frame.data, 4);
-                    Debug.Log($"[RX] GetParam idx=0x{idx:X4} iq_ref={val:F3}A");
-                }
-                else
-                    Debug.Log($"[RX] GetParam idx=0x{idx:X4}");
-                OnGetParamResponse?.Invoke(idx, frame.data);
-            }
+                ProcessFrame(frameCopy);
+            });
         };
         uart.OnDataReceived += data => decoder.Feed(data);
     }
@@ -93,6 +91,30 @@ public class MotorControllerUI : MonoBehaviour
         _mitModeActive = false;
         MotorEnabled = false;
         SendMotorCommand(0x04, 1);
+    }
+
+    private void ProcessFrame(AtFrame frame)
+    {
+        uint commType = (frame.canId >> 24) & 0xFF;
+        if (commType == 0x02 || commType == 0x18)
+        {
+            LastFeedback = MotorFeedback.Parse(frame);
+            Debug.Log($"[RX] {LastFeedback}");
+        }
+        else if (commType == 0x11 && frame.dataLen >= 8)
+        {
+            ushort idx = (ushort)(frame.data[0] | (frame.data[1] << 8));
+            if (idx == 0x7005)
+                Debug.Log($"[RX] GetParam idx=0x{idx:X4} mode={frame.data[4]}");
+            else if (idx == 0x7006)
+            {
+                float val = System.BitConverter.ToSingle(frame.data, 4);
+                Debug.Log($"[RX] GetParam idx=0x{idx:X4} iq_ref={val:F3}A");
+            }
+            else
+                Debug.Log($"[RX] GetParam idx=0x{idx:X4}");
+            OnGetParamResponse?.Invoke(idx, frame.data);
+        }
     }
 
     private void SendMotorCommand(uint commType, byte data0 = 0)
@@ -325,5 +347,35 @@ public class MotorControllerUI : MonoBehaviour
         if (x > x_max) x = x_max;
         else if (x < x_min) x = x_min;
         return (int)((x - x_min) * ((1 << bits) - 1) / span);
+    }
+
+    private Coroutine autoPollRoutine;
+    public bool IsAutoPolling => autoPollRoutine != null;
+
+    public void StartAutoPoll(List<ushort> indices, float interval = 0.5f)
+    {
+        StopAutoPoll();
+        autoPollRoutine = StartCoroutine(AutoPollRoutine(indices, interval));
+    }
+
+    public void StopAutoPoll()
+    {
+        if (autoPollRoutine != null)
+        {
+            StopCoroutine(autoPollRoutine);
+            autoPollRoutine = null;
+        }
+    }
+
+    private System.Collections.IEnumerator AutoPollRoutine(List<ushort> indices, float interval)
+    {
+        while (true)
+        {
+            foreach (var idx in indices)
+            {
+                SendGetParam(idx);
+                yield return new WaitForSeconds(interval);
+            }
+        }
     }
 }

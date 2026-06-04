@@ -18,7 +18,7 @@ public class CsvLogger : MonoBehaviour
 
     void Start()
     {
-        motorUI = FindObjectOfType<MotorControllerUI>();
+        motorUI = FindFirstObjectByType<MotorControllerUI>();
         if (motorUI == null)
         {
             Debug.LogError("CsvLogger: MotorControllerUI not found");

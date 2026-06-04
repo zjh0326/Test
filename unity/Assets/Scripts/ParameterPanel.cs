@@ -7,10 +7,12 @@ public class ParameterPanel : MonoBehaviour
 {
     [SerializeField] private Transform rowContainer;
     [SerializeField] private float rowHeight = 28f;
+    [SerializeField] private float pollInterval = 0.5f;
 
     private MotorControllerUI motorUI;
     private Dictionary<ushort, TextMeshProUGUI> valueLabels = new Dictionary<ushort, TextMeshProUGUI>();
     private Dictionary<ushort, TMP_InputField> inputFields = new Dictionary<ushort, TMP_InputField>();
+    private Button autoPollBtn;
 
     struct ParamDef
     {
@@ -44,7 +46,7 @@ public class ParameterPanel : MonoBehaviour
 
     void Start()
     {
-        motorUI = FindObjectOfType<MotorControllerUI>();
+        motorUI = FindFirstObjectByType<MotorControllerUI>();
         if (motorUI == null || rowContainer == null)
         {
             Debug.LogError("ParameterPanel: missing MotorControllerUI or RowContainer");
@@ -59,6 +61,8 @@ public class ParameterPanel : MonoBehaviour
 
         for (int i = 0; i < paramDefs.Count; i++)
             CreateRow(i, paramDefs[i]);
+
+        AddAutoPollButton();
 
         RectTransform crt = rowContainer.GetComponent<RectTransform>();
         crt.anchorMin = new Vector2(0, 1);
@@ -105,6 +109,53 @@ public class ParameterPanel : MonoBehaviour
                 motorUI.SendSetParamMode(def.index, (byte)val);
         });
         btnWrite.interactable = def.canWrite;
+    }
+
+    void AddAutoPollButton()
+    {
+        GameObject row = new GameObject("row_AutoPoll", typeof(RectTransform));
+        row.transform.SetParent(rowContainer, false);
+        row.transform.SetAsFirstSibling();
+        LayoutElement rowLe = row.AddComponent<LayoutElement>();
+        rowLe.preferredHeight = rowHeight;
+        rowLe.flexibleWidth = 1;
+
+        HorizontalLayoutGroup hlg = row.AddComponent<HorizontalLayoutGroup>();
+        hlg.childForceExpandWidth = false;
+        hlg.childForceExpandHeight = true;
+        hlg.childAlignment = TextAnchor.MiddleLeft;
+        hlg.spacing = 4;
+        hlg.padding = new RectOffset(4, 4, 0, 0);
+
+        TextMeshProUGUI label = AddText(row, "Auto Poll", 120, 13, TextAlignmentOptions.Left, TextAnchor.MiddleLeft);
+
+        autoPollBtn = AddButton(row, "Start", 166, () =>
+        {
+            if (motorUI.IsAutoPolling)
+            {
+                motorUI.StopAutoPoll();
+                SetAutoPollButtonText(false);
+            }
+            else
+            {
+                List<ushort> indices = new List<ushort>();
+                foreach (var def in paramDefs)
+                    indices.Add(def.index);
+                motorUI.StartAutoPoll(indices, pollInterval);
+                SetAutoPollButtonText(true);
+            }
+        });
+    }
+
+    void SetAutoPollButtonText(bool polling)
+    {
+        if (autoPollBtn == null) return;
+        var tmp = autoPollBtn.GetComponentInChildren<TMPro.TextMeshProUGUI>();
+        if (tmp != null)
+        {
+            tmp.text = polling ? "Stop" : "Start";
+            tmp.color = polling ? Color.red : Color.black;
+        }
     }
 
     TextMeshProUGUI AddText(GameObject parent, string text, float width, float fontSize,
@@ -228,6 +279,9 @@ public class ParameterPanel : MonoBehaviour
     void OnDestroy()
     {
         if (motorUI != null)
+        {
             motorUI.OnGetParamResponse -= OnParamResponse;
+            motorUI.StopAutoPoll();
+        }
     }
 }

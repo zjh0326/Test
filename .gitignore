@@ -1,9 +1,23 @@
 # STM32
-stm32/MDK-ARM/
-stm32/Debug/
-stm32/Release/
-stm32/*.uvguix.*
-stm32/*.dep
+stm32/MDK-ARM/**/*.o
+stm32/MDK-ARM/**/*.d
+stm32/MDK-ARM/**/*.crf
+stm32/MDK-ARM/**/*.axf
+stm32/MDK-ARM/**/*.hex
+stm32/MDK-ARM/**/*.map
+stm32/MDK-ARM/**/*.lnp
+stm32/MDK-ARM/**/*.htm
+stm32/MDK-ARM/**/*.log
+stm32/MDK-ARM/**/*.lst
+stm32/MDK-ARM/**/*.dep
+stm32/MDK-ARM/**/*.uvguix.*
+stm32/MDK-ARM/Listings/
+stm32/MDK-ARM/Objects/
+stm32/MDK-ARM/.vscode/
+stm32/MDK-ARM/DebugConfig/
+stm32/MDK-ARM/JLinkLog.txt
+stm32/MDK-ARM/JLinkSettings.ini
+stm32/MDK-ARM/RTE/
 
 # Unity
 unity/[Ll]ibrary/

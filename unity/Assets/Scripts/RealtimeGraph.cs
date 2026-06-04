@@ -6,7 +6,6 @@ using System.Collections.Generic;
 public class RealtimeGraph : MonoBehaviour
 {
     [SerializeField] private RawImage graphImage;
-    [SerializeField] private int maxPoints = 500;
 
     [Header("Theme")]
     [SerializeField] private Color bgColor = new Color(0.92f, 0.92f, 0.92f);
@@ -43,10 +42,12 @@ public class RealtimeGraph : MonoBehaviour
 
     private TextMeshProUGUI lblX;
     private List<TextMeshProUGUI> yLabels = new List<TextMeshProUGUI>();
+    private Color32[] pixels;
+    private int texW, texH;
 
     void Start()
     {
-        motorUI = FindObjectOfType<MotorControllerUI>();
+        motorUI = FindFirstObjectByType<MotorControllerUI>();
         if (motorUI == null || graphImage == null)
         {
             Debug.LogError("RealtimeGraph: missing MotorControllerUI or RawImage");
@@ -55,11 +56,12 @@ public class RealtimeGraph : MonoBehaviour
         }
         graphTime = 0f;
 
-        int w = Mathf.Max(100, (int)graphImage.rectTransform.rect.width);
-        int h = Mathf.Max(60, (int)graphImage.rectTransform.rect.height);
-        tex = new Texture2D(w, h);
+        texW = Mathf.Max(100, (int)graphImage.rectTransform.rect.width);
+        texH = Mathf.Max(60, (int)graphImage.rectTransform.rect.height);
+        tex = new Texture2D(texW, texH);
         tex.filterMode = FilterMode.Point;
         graphImage.texture = tex;
+        pixels = new Color32[texW * texH];
 
         float maxR = Mathf.Max(posRange, spdRange, curRange);
 
@@ -228,10 +230,10 @@ public class RealtimeGraph : MonoBehaviour
         int half = ph / 2 - 1;
         for (int i = 0; i < ts.Count - 1; i++)
         {
-            int x0 = xL + (int)((ts[i] - t0) / tr * (xR - xL));
-            int x1 = xL + (int)((ts[i + 1] - t0) / tr * (xR - xL));
-            int y0 = midY + (int)(Mathf.Clamp(vals[i], -range, range) / range * half);
-            int y1 = midY + (int)(Mathf.Clamp(vals[i + 1], -range, range) / range * half);
+            int x0 = xL + Mathf.RoundToInt((ts[i] - t0) / tr * (xR - xL));
+            int x1 = xL + Mathf.RoundToInt((ts[i + 1] - t0) / tr * (xR - xL));
+            int y0 = midY + Mathf.RoundToInt(Mathf.Clamp(vals[i], -range, range) / range * half);
+            int y1 = midY + Mathf.RoundToInt(Mathf.Clamp(vals[i + 1], -range, range) / range * half);
             Segment(x0, y0, x1, y1, c);
         }
     }

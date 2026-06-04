@@ -304,7 +304,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   graphImage: {fileID: 617783760}
-  maxPoints: 500
   bgColor: {r: 0.92, g: 0.92, b: 0.92, a: 1}
   gridColor: {r: 0.75, g: 0.75, b: 0.75, a: 1}
   axisColor: {r: 0.4, g: 0.4, b: 0.4, a: 1}
@@ -315,7 +314,7 @@ MonoBehaviour:
   spdRange: 8
   curRange: 10
   yTickStep: 2.5
-  timeWindow: 6
+  timeWindow: 5
 --- !u!1 &325203774
 GameObject:
   m_ObjectHideFlags: 0
@@ -1580,6 +1579,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   rowContainer: {fileID: 1387759745}
   rowHeight: 28
+  pollInterval: 0.5
 --- !u!114 &497298516
 MonoBehaviour:
   m_ObjectHideFlags: 0
