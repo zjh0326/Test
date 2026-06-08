@@ -4,7 +4,8 @@ public struct MotorFeedback
 {
     public float position;    // rad
     public float speed;       // rad/s
-    public float current;     // A
+    public float torque;      // Nm (from feedback frame Byte4-5, range ±17Nm)
+    public float current;     // A (from GetParam 0x701A iqf polling — not yet implemented)
     public float temperature; // °C
     public byte errorCode;
     public string errorMsg;
@@ -25,8 +26,8 @@ public struct MotorFeedback
             ushort spdRaw = (ushort)((frame.data[2] << 8) | frame.data[3]);
             fb.speed = (spdRaw - 32768.0f) * 44.0f / 32768.0f;
 
-            ushort curRaw = (ushort)((frame.data[4] << 8) | frame.data[5]);
-            fb.current = (curRaw - 32768.0f) * 17.0f / 32768.0f;
+            ushort torRaw = (ushort)((frame.data[4] << 8) | frame.data[5]);
+            fb.torque = (torRaw - 32768.0f) * 17.0f / 32768.0f;
 
             ushort tempRaw = (ushort)((frame.data[6] << 8) | frame.data[7]);
             fb.temperature = tempRaw * 0.1f;
@@ -50,7 +51,7 @@ public struct MotorFeedback
 
     public override string ToString()
     {
-        return $"Pos={position:F3}rad  Spd={speed:F3}rad/s  Cur={current:F3}A  " +
+        return $"Pos={position:F3}rad  Spd={speed:F3}rad/s  Tor={torque:F3}Nm  " +
                $"Temp={temperature:F1}°C  Err=0x{errorCode:X2}({errorMsg})";
     }
 }
